@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+{% block body %}
+<table>
+	<tr>
+		<th>Name</th>
+		<th>Size</th>
+		<th>State</th>
+		<th>Price</th>
+		<th>Frequency</th>
+	</tr>
+{% for ad in ads %}
+<tr>
+	<td><a href="/admin/ad/{{ ad['_id'] }}">{{ ad.get('name', 'n/a') }}</a></td>
+	<td>{{ ad.get('size', 'all') }}</td>
+	<td>{{ ad.get('state', 'inactive') }}</td>
+	<td>{{ ad.get('price', 0) }}</td>
+	<td>{{ ad.get('frequency', 0) }}</td>
+{% end %}
+</table>
+{% end %}

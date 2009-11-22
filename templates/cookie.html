@@ -1,0 +1,5 @@
+{% for creative in creatives %}
+{{ creative['name'] }}: {{ creative_views[str(creative['_id'])] }} <br />
+{{ creative['tag'] }}
+<hr />
+{% end %}

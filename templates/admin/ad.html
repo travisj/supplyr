@@ -1,0 +1,45 @@
+{% extends "../layout.html" %}
+
+{% block body %}
+<form acion="" method="post">
+	{% if ad %}
+	<input type="hidden" name="id" value="{{ ad['_id'] }}" />
+	{% end %}
+	<table>
+		<tr>
+			<td>Name:</td>
+			<td><input type="text" name="name" value="{{ ad.get('name', '') }}" /></td>
+		</tr>
+		<tr>
+			<td>Size:</td>
+			<td>
+				<select name="size">
+					<option {{ 'selected="selected"' if ad.get('size', None) == '300x250' else '' }} value="300x250">300x250</option>
+					<option {{ 'selected="selected"' if ad.get('size', None) == '160x600' else '' }} value="160x600">160x600</option>
+					<option {{ 'selected="selected"' if ad.get('size', None) == '468x60' else '' }} value="468x60">468x60</option>
+					<option {{ 'selected="selected"' if ad.get('size', None) == '125x125' else '' }} value="125x125">125x125</option>
+				</select>
+		</tr>
+		<tr>
+			<td>Price:</td>
+			<td><input type="text" name="price" value="{{ ad.get('price', 0) }}" /></td>
+		</tr>
+		<tr>
+			<td>Active:</td>
+			<td><input type="checkbox" name="state" value="active" value="active" {{ 'checked="checked"' if ad.get('state', None) == 'active' else '' }} /></td>
+		</tr>
+		<tr>
+			<td>Daily user frequency:</td>
+			<td><input type="text" name="frequency" value="{{ ad.get('frequency', 0) }}" /></td>
+		</tr>
+		<tr>
+			<td>HTML ad tag:</td>
+			<td>
+				<textarea name="tag" rows="15" cols="40">{{ ad.get('tag', '') }}</textarea>
+			</td>
+		</tr>
+		<tr>
+			<td><input type="submit" value="Save" /></td>
+		</tr>
+</form>
+{% end %}
