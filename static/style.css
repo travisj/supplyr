@@ -1,0 +1,6 @@
+th, td {
+	padding-right: 10px;
+}
+.inactive {
+	font-style: italic;
+}

@@ -9,6 +9,10 @@
 		<tr>
 			<td>Name:</td>
 			<td><input type="text" name="name" value="{{ ad.get('name', '') }}" /></td>
+			{% if ad.get('_id', None) %}
+			<td>Default URL:</td>
+			<td>http://{{ request.host }}/iframe?size={{ ad.get('size') }}&amp;marker={{ str(ad.get('_id')) }}</td>
+			{% end %}
 		</tr>
 		<tr>
 			<td>Size:</td>
@@ -38,6 +42,11 @@
 				<textarea name="tag" rows="15" cols="40">{{ ad.get('tag', '') }}</textarea>
 			</td>
 		</tr>
+		{% if ad.get('_id', None) %}
+		<tr>
+			<td><a onclick="return confirm('Are you sure you want to Delete?')" href="/admin/delete/{{ str(ad.get('_id')) }}">Delete</a></td>
+		</tr>
+		{% end %}
 		<tr>
 			<td><input type="submit" value="Save" /></td>
 		</tr>

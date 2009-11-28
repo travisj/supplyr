@@ -3,19 +3,27 @@
 {% block body %}
 <table>
 	<tr>
-		<th>Name</th>
 		<th>Size</th>
+		<th>Name</th>
 		<th>State</th>
 		<th>Price</th>
 		<th>Frequency</th>
 	</tr>
+{% set previous_size = '' %}
 {% for ad in ads %}
+{% if ad.get('size')  != previous_size %}
 <tr>
+	<th>{{ ad.get('size') }}</td>
+</tr>
+{% set previous_size = ad.get('size') %}
+{% end %}
+<tr class="{{ ad.get('state', 'inactive') }}">
+	<td>&nbsp;</td>
 	<td><a href="/admin/ad/{{ ad['_id'] }}">{{ ad.get('name', 'n/a') }}</a></td>
-	<td>{{ ad.get('size', 'all') }}</td>
 	<td>{{ ad.get('state', 'inactive') }}</td>
-	<td>{{ ad.get('price', 0) }}</td>
+	<td>{{ format_currency(ad.get('price', 0)) }}</td>
 	<td>{{ ad.get('frequency', 0) }}</td>
+</tr>
 {% end %}
 </table>
 {% end %}

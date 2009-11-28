@@ -1,7 +1,10 @@
 import os
 import uuid
 import datetime
+import hashlib
+import locale
 
+import functools
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
@@ -14,8 +17,64 @@ ads = db.ads
 cookies = db.cookies
 impressions = db.impressions
 
+locale.setlocale( locale.LC_ALL, '' )
+
+def administrator(method):
+	"""Decorate with this method to restrict to site admins."""
+	@functools.wraps(method)
+	def wrapper(self, *args, **kwargs):
+		if not self.current_user:
+			if self.request.method == "GET":
+				self.redirect(self.get_login_url())
+				return
+			raise web.HTTPError(403)
+		else:
+			return method(self, *args, **kwargs)
+	return wrapper
+
+
 class BaseHandler(tornado.web.RequestHandler):
-	pass
+	"""Implements Google Accounts authentication methods."""
+	def get_current_user(self):
+		session = self.get_session()
+		user = False
+		if session:
+			user = db.users.find_one({'_id':session['user']['_id']})
+
+		if user:
+			return user
+		else:
+			return False
+
+	def start_session(self):
+		self.session_id = self.get_cookie('session_id')
+		if not self.session_id:
+			self.session_id = str(uuid.uuid4())
+			self.set_cookie('session_id', self.session_id)
+	
+	def get_session(self):
+		self.start_session()
+		session = db.sessions.find_one({'id':self.session_id})
+		if not session:
+			session = {}
+		return session
+
+	def delete_session(self):
+		self.start_session()
+		db.sessions.remove({'id':self.session_id})
+
+	def set_in_session(self, key, value):
+		session = self.get_session()
+		session['id'] = self.session_id
+		session[key] = value
+		db.sessions.save(session)
+
+	def get_login_url(self):
+		# return users.create_login_url(self.request.uri)
+		return '/login'
+
+	def render_string(self, template_name, **kwargs):
+		return tornado.web.RequestHandler.render_string(self, template_name,  **kwargs)
 
 class AdServerHandler(BaseHandler):
 	def reset_ad_cookie(self):
@@ -72,9 +131,8 @@ class AdServerHandler(BaseHandler):
 			tag_on_page = 0
 
 		cookie = self.get_ad_cookie()
-		for ad in ads.find({"size":size, "state":"active"}).sort("price", pymongo.DESCENDING):
+		for ad in ads.find({"size":size, "state":"active", "deleted": {'$ne': True}}).sort("price", pymongo.DESCENDING):
 			if not marker_found:
-				print 'checking: %s == %s' % (marker, str(ad['_id']))
 				if marker == str(ad['_id']):
 					marker_found = True
 				continue
@@ -89,13 +147,14 @@ class AdServerHandler(BaseHandler):
 				db.raw_impressions.save({'ad_id':str(ad['_id']), 'date':datetime.datetime.utcnow(), 'uuid': self.uuid, 'tag_on_page': tag_on_page})
 				return ad
 
-		print 'ended up here'
-
-
 class MainHandler(BaseHandler):
+	@administrator
 	def get(self):
-		all_ads = ads.find()
-		self.render("index.html", ads=all_ads)
+		all_ads = ads.find({'deleted': {'$ne': True }}).sort("size", pymongo.DESCENDING).sort("price", pymongo.DESCENDING)
+		self.render("index.html", ads=all_ads, format_currency=self.format_currency)
+
+	def format_currency(self, number):
+		return locale.currency(float(number))
 
 class CookieHandler(AdServerHandler):
 	def get(self):
@@ -126,15 +185,15 @@ class ResetHandler(AdServerHandler):
 
 
 class AdminAdHandler(BaseHandler):
+	@administrator
 	def get(self, id):
 		ad = {}
 		if id is not None:
 			ad = ads.find_one({'_id':ObjectId(id)})
 		self.render("admin/ad.html", ad=ad)
 
+	@administrator
 	def post(self, id):
-		#id = self.get_argument("id", None)
-		print id
 		name = self.get_argument("name", "unnamed")
 		state = self.get_argument("state", "inactive")
 		size = self.get_argument('size', None)
@@ -159,6 +218,32 @@ class AdminAdHandler(BaseHandler):
 
 		self.redirect("/")
 
+class DeleteHandler(BaseHandler):
+	@administrator
+	def get(self, id):
+		db.ads.update({'_id':ObjectId(id)}, {'$set': {'deleted': True}});
+		self.redirect('/')
+		
+class LoginHandler(BaseHandler):
+	def get(self):
+		self.render("login.html")
+
+	def post(self):
+		# check login info
+		login = self.get_argument('login')
+		password = self.get_argument('password')
+		
+		user = db.users.find_one({'login':login, 'password': hashlib.sha1(password).hexdigest()})
+		if user:
+			self.set_in_session('user', user)
+			self.redirect('/')
+		else:
+			self.render("login.html")
+
+class LogoutHandler(BaseHandler):
+	def get(self):
+		self.delete_session()
+		self.redirect('/')
 
 settings = {
 	"static_path": os.path.join(os.path.dirname(__file__), "static"),
@@ -171,7 +256,10 @@ application = tornado.web.Application([
 	(r"/cookie", CookieHandler),
 	(r"/iframe", IframeHandler),
 	(r"/reset", ResetHandler),
+	(r"/login", LoginHandler),
+	(r"/logout", LogoutHandler),
 	(r"/admin/ad/([^/]+)?", AdminAdHandler),
+	(r"/admin/delete/([^/]+)?", DeleteHandler),
 ], **settings)
 
 if __name__ == "__main__":

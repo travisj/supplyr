@@ -4,14 +4,17 @@
 	<head>
 		<meta http-equiv="Content-type" content="text/html; charset=utf-8">
 		<title>Supplyr - {% block title %}{% end %}</title>
-
+		<link rel="stylesheet" href="{{ static_url('style.css') }}" type="text/css"/>
 	</head>
 	<body>
 		<h1><a href="/">Supplyr</a></h1>
+		{% if current_user %}
 		<ul>
 			<li><a href="/admin/ad/">New Ad</a></li>
 			<li><a href="/admin/reports">Reports</a></li>
+			<li><a href="/logout">Logout</a></li>
 		</ul>
+		{% end %}
 		{% block body %}{% end %}
 	</body>
 </html>
