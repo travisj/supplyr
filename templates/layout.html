@@ -5,6 +5,10 @@
 		<meta http-equiv="Content-type" content="text/html; charset=utf-8">
 		<title>Supplyr - {% block title %}{% end %}</title>
 		<link rel="stylesheet" href="{{ static_url('style.css') }}" type="text/css"/>
+		<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.2/themes/flick/jquery-ui.css" type="text/css"/>
+
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.2/jquery-ui.min.js"></script>
 	</head>
 	<body>
 		<h1><a href="/">Supplyr</a></h1>
@@ -12,6 +16,7 @@
 		<ul>
 			<li><a href="/admin/ad/">New Ad</a></li>
 			<li><a href="/admin/reports">Reports</a></li>
+			<li><a href="/admin/users/">Users</a></li>
 			<li><a href="/logout">Logout</a></li>
 		</ul>
 		{% end %}

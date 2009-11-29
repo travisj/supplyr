@@ -218,6 +218,36 @@ class AdminAdHandler(BaseHandler):
 
 		self.redirect("/")
 
+class AdminUsersHandler(BaseHandler):
+	@administrator
+	def get(self, login):
+		users = db.users.find()
+		user = None
+		if login:
+			user = db.users.find_one({'login': login})
+
+		self.render('admin/users.html', users=users, user=user)
+
+	@administrator
+	def post(self, login):
+		id = self.get_argument('id', None)
+		login = self.get_argument('login')
+		password = self.get_argument('password', None)
+
+		user = {}
+		user['login'] = login
+
+		if id:
+			print id
+			if password:
+				user['password'] = hashlib.sha1(password).hexdigest()
+			db.users.update({'_id':ObjectId(str(id))}, {"$set":user})
+		else:
+			user['password'] = hashlib.sha1(password).hexdigest()
+			db.users.insert(user)
+
+		self.redirect('/admin/users/')
+
 class DeleteHandler(BaseHandler):
 	@administrator
 	def get(self, id):
@@ -258,6 +288,7 @@ application = tornado.web.Application([
 	(r"/reset", ResetHandler),
 	(r"/login", LoginHandler),
 	(r"/logout", LogoutHandler),
+	(r"/admin/users/([^/]+)?", AdminUsersHandler),
 	(r"/admin/ad/([^/]+)?", AdminAdHandler),
 	(r"/admin/delete/([^/]+)?", DeleteHandler),
 ], **settings)

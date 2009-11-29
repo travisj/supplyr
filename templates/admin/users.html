@@ -1,0 +1,29 @@
+{% extends "../layout.html" %}
+
+{% block body %}
+<h4>Existing Users</h4>
+<ul>
+{% for u in users %}
+<li><a href="/admin/users/{{ u.get('login') }}" />{{ u.get('login') }}</a></li>
+{% end %}
+</ul>
+<h4>{{ 'Update User' if user else 'Create New User' }}</h4>
+<form action="" method="post">
+{% if user %}
+<input type="hidden" name="id" value="{{ user.get('_id') }}" />
+{% end %}
+<table>
+	<tr>
+		<td>Login:</td>
+		<td><input type="text" name="login" value="{{ user.get('login', '') if user else '' }}" /></td>
+	</tr>
+	<tr>
+		<td>Password</td>
+		<td><input type="text" name="password" /></td>
+	</tr>
+	<tr>
+		<td><input type="submit" value="{{ 'Update' if user else 'Create' }}" /></td>
+	</tr>
+</table>
+</form>
+{% end %}

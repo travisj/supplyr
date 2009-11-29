@@ -8,11 +8,7 @@
 	<table>
 		<tr>
 			<td>Name:</td>
-			<td><input type="text" name="name" value="{{ ad.get('name', '') }}" /></td>
-			{% if ad.get('_id', None) %}
-			<td>Default URL:</td>
-			<td>http://{{ request.host }}/iframe?size={{ ad.get('size') }}&amp;marker={{ str(ad.get('_id')) }}</td>
-			{% end %}
+			<td><input type="text" name="name" value="{{ ad.get('name', '') }}" />{{ '<a href="#" id="export-link">Export</a>' if ad.get('_id', None) else '' }}</td>
 		</tr>
 		<tr>
 			<td>Size:</td>
@@ -51,4 +47,35 @@
 			<td><input type="submit" value="Save" /></td>
 		</tr>
 </form>
+
+<script type="text/javascript">
+$(document).ready(function(){
+	$("#export-dialog").dialog({
+		'autoOpen': false,
+		'modal': true,
+		'height': 350,
+		'width': 500
+	});
+
+	$("#export-link").click(function(e) {
+		e.preventDefault();
+		$("#export-dialog").dialog('open');
+	});
+});
+</script>
+
+{% if ad.get('_id', None) %}
+<div id="export-dialog" title="Export" class="hide">
+	<p>
+		<strong>URL:</strong><br />
+		<input type="text" size="40" value="http://{{ request.host }}/iframe?size={{ ad.get('size') }}&amp;marker={{ str(ad.get('_id')) }}" />
+	</p>
+	<p>
+		<strong>Iframe:</strong><br />
+		<textarea rows="5" cols="40">
+			<IFRAME FRAMEBORDER=0 MARGINWIDTH=0 MARGINHEIGHT=0 SCROLLING=NO WIDTH={{ ad.get('size', '0x0').split('x')[0] }} HEIGHT={{ ad.get('size', '0x0').split('x')[1] }} SRC="http://{{ request.host }}/iframe?size={{ ad.get('size') }}&amp;marker={{ str(ad.get('_id')) }}"></IFRAME>
+		</textarea>
+	</p>
+</div>
+{% end %}
 {% end %}

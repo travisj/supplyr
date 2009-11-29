@@ -4,3 +4,7 @@ th, td {
 .inactive {
 	font-style: italic;
 }
+
+.hide {
+	display: none;
+}
