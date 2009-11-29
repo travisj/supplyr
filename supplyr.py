@@ -8,8 +8,14 @@ import functools
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
+from tornado.options import options, define
+
 import pymongo
 from pymongo.objectid import ObjectId 
+
+define("debug", default='off', help="on or off to turn on debugging", type=str)
+define("port", default=8888, type=int)
+
 
 connection = pymongo.Connection()
 db = connection.supplyr
@@ -275,25 +281,28 @@ class LogoutHandler(BaseHandler):
 		self.delete_session()
 		self.redirect('/')
 
-settings = {
-	"static_path": os.path.join(os.path.dirname(__file__), "static"),
-	"template_path": os.path.join(os.path.dirname(__file__), "templates"),
-	"debug": True,
-}
-
-application = tornado.web.Application([
-	(r"/", MainHandler),
-	(r"/cookie", CookieHandler),
-	(r"/iframe", IframeHandler),
-	(r"/reset", ResetHandler),
-	(r"/login", LoginHandler),
-	(r"/logout", LogoutHandler),
-	(r"/admin/users/([^/]+)?", AdminUsersHandler),
-	(r"/admin/ad/([^/]+)?", AdminAdHandler),
-	(r"/admin/delete/([^/]+)?", DeleteHandler),
-], **settings)
 
 if __name__ == "__main__":
+	tornado.options.parse_command_line()
+
+	settings = {
+		"static_path": os.path.join(os.path.dirname(__file__), "static"),
+		"template_path": os.path.join(os.path.dirname(__file__), "templates"),
+		"debug": True if options.debug == 'on' else False,
+	}
+
+	application = tornado.web.Application([
+		(r"/", MainHandler),
+		(r"/cookie", CookieHandler),
+		(r"/iframe", IframeHandler),
+		(r"/reset", ResetHandler),
+		(r"/login", LoginHandler),
+		(r"/logout", LogoutHandler),
+		(r"/admin/users/([^/]+)?", AdminUsersHandler),
+		(r"/admin/ad/([^/]+)?", AdminAdHandler),
+		(r"/admin/delete/([^/]+)?", DeleteHandler),
+	], **settings)
+
 	http_server = tornado.httpserver.HTTPServer(application)
-	http_server.listen(8888)
+	http_server.listen(options.port)
 	tornado.ioloop.IOLoop.instance().start()
