@@ -120,6 +120,7 @@ class AdServerHandler(BaseHandler):
 		return cookie
 	
 	def set_ad_cookie(self, cookie):
+		cookie['ip'] = self.request.remote_ip
 		cookies.save(cookie)
 
 	def get_creative(self, creative_id):
