@@ -120,7 +120,7 @@ class AdServerHandler(BaseHandler):
 		return cookie
 	
 	def set_ad_cookie(self, cookie):
-		cookie['ip'] = self.request.remote_ip
+		cookie['ip'] = self.request.headers.get('X-Real-Ip', self.request.remote_ip)
 		cookies.save(cookie)
 
 	def get_creative(self, creative_id):
@@ -150,7 +150,7 @@ class AdServerHandler(BaseHandler):
 				frequency_for_user = cookie.get('creative').get('%s' % (ad['_id']), None)
 
 			if int(frequency_for_ad) == 0 or frequency_for_user == None or int(frequency_for_user) < int(frequency_for_ad):
-				cookies.update({'uuid':self.uuid}, {'$inc': {'creative.%s' % (ad['_id']): 1}})
+				cookies.update({'uuid':self.uuid}, {'$inc': {'creative.%s' % (ad['_id']): 1}, '$set': {'ip': self.request.headers.get('X-Real-Ip', self.request.remote_ip)}})
 				db.raw_impressions.save({'ad_id':str(ad['_id']), 'date':datetime.datetime.utcnow(), 'uuid': self.uuid, 'tag_on_page': tag_on_page})
 				return ad
 
