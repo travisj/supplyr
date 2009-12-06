@@ -167,7 +167,7 @@ class AdServerHandler(BaseHandler):
 class MainHandler(BaseHandler):
 	@administrator
 	def get(self):
-		all_ads = ads.find({'deleted': {'$ne': True }}).sort([["size", pymongo.DESCENDING], ["price", pymongo.DESCENDING]])
+		all_ads = ads.find({'deleted': {'$ne': True }}).sort([["state", pymongo.ASCENDING], ["size", pymongo.DESCENDING], ["price", pymongo.DESCENDING]])
 		self.render("index.html", ads=all_ads, format_currency=self.format_currency)
 
 	def format_currency(self, number):
@@ -194,6 +194,13 @@ class IframeHandler(AdServerHandler):
 		self.write("<HTML><BODY>")
 		self.write(ad['tag'])
 		self.write("</BODY></HTML>")
+
+
+class SyncIdsHandler(AdServerHandler):
+	def get(self):
+		cookie = self.get_ad_cookie()	
+		if self.get_argument('id', None):
+			cookies.update({'uuid':self.uuid}, {'$set': {'uuid': self.uuid, 'syncid': self.get_argument('id')}})
 
 
 class ResetHandler(AdServerHandler):
@@ -306,6 +313,7 @@ if __name__ == "__main__":
 		(r"/", MainHandler),
 		(r"/cookie", CookieHandler),
 		(r"/iframe", IframeHandler),
+		(r"/sync-ids", SyncIdsHandler),
 		(r"/reset", ResetHandler),
 		(r"/login", LoginHandler),
 		(r"/logout", LogoutHandler),
