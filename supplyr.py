@@ -3,6 +3,7 @@ import uuid
 import datetime
 import hashlib
 import locale
+import GeoIP
 
 import functools
 import tornado.httpserver
@@ -151,13 +152,22 @@ class AdServerHandler(BaseHandler):
 
 			if int(frequency_for_ad) == 0 or frequency_for_user == None or int(frequency_for_user) < int(frequency_for_ad):
 				cookies.update({'uuid':self.uuid}, {'$inc': {'creative.%s' % (ad['_id']): 1}, '$set': {'ip': self.request.headers.get('X-Real-Ip', self.request.remote_ip)}})
-				db.raw_impressions.save({'ad_id':str(ad['_id']), 'date':datetime.datetime.utcnow(), 'uuid': self.uuid, 'tag_on_page': tag_on_page})
+
+				gi = GeoIP.new(GeoIP.GEOIP_MEMORY_CACHE)
+				country = gi.country_code_by_addr(self.request.headers.get('X-Real-Ip', self.request.remote_ip))
+
+				db.impressions.update({'ad_id':str(ad['_id']), 'country': country, 'date': datetime.date.today().isoformat(), 'tag_on_page': tag_on_page}, 
+										{
+											'$inc': {'view': 1},
+											'$set': {'ad_id':str(ad['_id']), 'country': country, 'date': datetime.date.today().isoformat(), 'tag_on_page': tag_on_page}
+										}, upsert=True)
+										
 				return ad
 
 class MainHandler(BaseHandler):
 	@administrator
 	def get(self):
-		all_ads = ads.find({'deleted': {'$ne': True }}).sort("size", pymongo.DESCENDING).sort("price", pymongo.DESCENDING)
+		all_ads = ads.find({'deleted': {'$ne': True }}).sort([["size", pymongo.DESCENDING], ["price", pymongo.DESCENDING]])
 		self.render("index.html", ads=all_ads, format_currency=self.format_currency)
 
 	def format_currency(self, number):
