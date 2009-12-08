@@ -87,12 +87,7 @@ class AdServerHandler(BaseHandler):
 	def reset_ad_cookie(self):
 		self.set_cookie('uuid', '')
 
-	def get_ad_cookie(self):
-		self.uuid = self.get_cookie('uuid')
-		if not self.uuid:
-			self.uuid = str(uuid.uuid4())
-			self.set_cookie('uuid', self.uuid)
-		
+	def setup_ad_cookie(self):
 		stored_cookie = cookies.find_one({'uuid':self.uuid})
 		if stored_cookie:
 			now = datetime.datetime.utcnow()
@@ -119,6 +114,19 @@ class AdServerHandler(BaseHandler):
 			}
 			self.set_ad_cookie(cookie)
 		return cookie
+		
+
+	def get_ad_cookie(self):
+		self.uuid = self.get_cookie('uuid')
+		if not self.uuid:
+			self.uuid = str(uuid.uuid4())
+			self.set_cookie('uuid', self.uuid)
+		return self.setup_ad_cookie()	
+
+	def get_ad_cookie_by_sync_id(self, sync_id):
+		cookie = db.cookies.find_one({'syncid': sync_id})
+		self.uuid = cookie['uuid']
+		return self.setup_ad_cookie()
 	
 	def set_ad_cookie(self, cookie):
 		cookie['ip'] = self.request.headers.get('X-Real-Ip', self.request.remote_ip)
@@ -127,7 +135,7 @@ class AdServerHandler(BaseHandler):
 	def get_creative(self, creative_id):
 		return ads.find_one({'_id':ObjectId(str(creative_id))})
 
-	def get_ad_to_serve(self):
+	def get_ad_to_serve(self, cookie):
 		size = self.get_argument('size')
 		marker = self.get_argument('marker', None)
 
@@ -138,7 +146,6 @@ class AdServerHandler(BaseHandler):
 		else:
 			tag_on_page = 0
 
-		cookie = self.get_ad_cookie()
 		for ad in ads.find({"size":size, "state":"active", "deleted": {'$ne': True}}).sort("price", pymongo.DESCENDING):
 			if not marker_found:
 				if marker == str(ad['_id']):
@@ -161,7 +168,6 @@ class AdServerHandler(BaseHandler):
 											'$inc': {'view': 1},
 											'$set': {'ad_id':str(ad['_id']), 'country': country, 'date': datetime.date.today().isoformat(), 'tag_on_page': tag_on_page}
 										}, upsert=True)
-										
 				return ad
 
 class MainHandler(BaseHandler):
@@ -189,18 +195,48 @@ class CookieHandler(AdServerHandler):
 
 class IframeHandler(AdServerHandler):
 	def get(self):
-		ad = self.get_ad_to_serve()
+		cookie = self.get_ad_cookie()
+		ad = self.get_ad_to_serve(cookie)
 	
 		self.write("<HTML><BODY>")
 		self.write(ad['tag'])
 		self.write("</BODY></HTML>")
 
+class ServerSideAdHandler(AdServerHandler):
+	def get(self):
+		sync = db.user_syncs.find_one({'sync_id': self.get_argument('id')});
+		sync_pixel = ''
+		if not sync:
+			self.uuid = str(uuid.uuid4())
+			db.user_syncs.save({'uuid': self.uuid, 'sync_id':self.get_argument('id')}) 
+			sync_pixel = '<img src="http://%s/sync-ids?id=%s" height=1 width=1 />' % (self.request.host, self.get_argument('id'))
+		else:
+			self.uuid = sync['uuid']
+
+		cookie = self.setup_ad_cookie()
+		ad = self.get_ad_to_serve(cookie)
+		self.write('%s %s' % (ad['tag'], sync_pixel))
+
 
 class SyncIdsHandler(AdServerHandler):
 	def get(self):
-		cookie = self.get_ad_cookie()	
-		if self.get_argument('id', None):
-			cookies.update({'uuid':self.uuid}, {'$set': {'uuid': self.uuid, 'syncid': self.get_argument('id')}})
+		sync_id = self.get_argument('id', None)
+		previous_uuid = self.get_cookie('uuid')
+		if sync_id:
+			sync = db.user_syncs.find_one({'sync_id': sync_id});
+			if sync:
+				self.uuid = sync['uuid']
+			else:
+				if previous_uuid:
+					self.uuid = previous_uuid
+				else:
+					self.uuid = str(uuid.uuid4())
+				db.user_syncs.save({'sync_id': sync_id, 'uuid': self.uuid})
+
+			self.set_cookie('uuid', self.uuid)
+			# if previous_uuid and self.uuid != previous_uuid then need to merge these cookies in the datastore sometime
+		#output a pixel here
+
 
 
 class ResetHandler(AdServerHandler):
@@ -314,6 +350,7 @@ if __name__ == "__main__":
 		(r"/cookie", CookieHandler),
 		(r"/iframe", IframeHandler),
 		(r"/sync-ids", SyncIdsHandler),
+		(r"/server-tag", ServerSideAdHandler),
 		(r"/reset", ResetHandler),
 		(r"/login", LoginHandler),
 		(r"/logout", LogoutHandler),

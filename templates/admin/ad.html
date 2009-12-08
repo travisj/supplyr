@@ -13,7 +13,7 @@
 		<tr>
 			<td>Size:</td>
 			<td>
-				<select name="size">
+				<select name="size" id="size">
 					<option {{ 'selected="selected"' if ad.get('size', None) == '300x250' else '' }} value="300x250">300x250</option>
 					<option {{ 'selected="selected"' if ad.get('size', None) == '160x600' else '' }} value="160x600">160x600</option>
 					<option {{ 'selected="selected"' if ad.get('size', None) == '468x60' else '' }} value="468x60">468x60</option>
@@ -36,7 +36,8 @@
 		<tr>
 			<td>HTML ad tag:</td>
 			<td>
-				<textarea name="tag" rows="15" cols="40">{{ ad.get('tag', '') }}</textarea>
+				<textarea name="tag" id="tag" rows="15" cols="40">{{ ad.get('tag', '') }}</textarea>
+				<br /><a href="#" id="preview-link">Preview</a>
 			</td>
 		</tr>
 		{% if ad.get('_id', None) %}
@@ -62,6 +63,18 @@ $(document).ready(function(){
 		e.preventDefault();
 		$("#export-dialog").dialog('open');
 	});
+
+	$("#preview-dialog").dialog({
+		'autoOpen': false,
+		'modal': true
+	});
+
+	$("#preview-link").click(function(e) {
+		e.preventDefault();
+		var size = $("#size").val().split('x');
+		$("#preview-dialog").dialog('option', 'height', size[1] * 1.0 + 16).dialog('option', 'width', size[0] * 1.0 + 34);
+		$("#preview-dialog").html($("#tag").val()).dialog('open');
+	});
 });
 </script>
 
@@ -79,4 +92,5 @@ $(document).ready(function(){
 	</p>
 </div>
 {% end %}
+<div id="preview-dialog" title="Preview" class="hide"></div>
 {% end %}
